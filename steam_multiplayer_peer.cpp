@@ -51,10 +51,6 @@ void SteamMultiplayerPeer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_peer_id_from_steam64","steam_id"), &SteamMultiplayerPeer::get_peer_id_from_steam64);
 	ClassDB::bind_method(D_METHOD("get_peer_map"), &SteamMultiplayerPeer::get_peer_map);
 
-	ClassDB::bind_method(D_METHOD("get_steam64_from_peer_id"), &SteamMultiplayerPeer::get_steam64_from_peer_id);
-	ClassDB::bind_method(D_METHOD("get_peer_id_from_steam64"), &SteamMultiplayerPeer::get_peer_id_from_steam64);
-	ClassDB::bind_method(D_METHOD("get_peer_map"), &SteamMultiplayerPeer::get_peer_map);
-
 	BIND_ENUM_CONSTANT(LOBBY_TYPE_PRIVATE);
 	BIND_ENUM_CONSTANT(LOBBY_TYPE_FRIENDS_ONLY);
 	BIND_ENUM_CONSTANT(LOBBY_TYPE_PUBLIC);
