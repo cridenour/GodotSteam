@@ -26,6 +26,123 @@
 #include "vector"
 
 /////////////////////////////////////////////////
+///// DEFINING CONSTANTS
+/////////////////////////////////////////////////
+//
+// Define Steam API constants
+#define INVALID_BREAKPAD_HANDLE 0
+#define GAME_EXTRA_INFO_MAX 64
+#define AUTH_TICKET_INVALID 0
+#define API_CALL_INVALID 0x0
+#define APP_ID_INVALID 0x0
+#define DEPOT_ID_INVALID 0x0
+#define STEAM_ACCOUNT_ID_MASK 0xFFFFFFFF
+#define STEAM_ACCOUNT_INSTANCE_MASK 0x000FFFFF
+#define STEAM_USER_CONSOLE_INSTANCE 2
+#define STEAM_USER_DESKTOP_INSTANCE 1
+#define STEAM_USER_WEB_INSTANCE 4
+#define QUERY_PORT_ERROR 0xFFFE
+#define QUERY_PORT_NOT_INITIALIZED 0xFFFF
+#define STEAM_BUFFER_SIZE 255
+#define STEAM_LARGE_BUFFER_SIZE 8160
+
+// Define Friends constants
+#define CHAT_METADATA_MAX 8192
+#define ENUMERATED_FOLLOWERS_MAX 50
+#define FRIENDS_GROUP_LIMIT 100
+#define INVALID_FRIEND_GROUP_ID -1
+#define MAX_FRIENDS_GROUP_NAME 64
+#define MAX_RICH_PRESENCE_KEY_LENGTH 64
+#define MAX_RICH_PRESENCE_KEYS 20
+#define MAX_RICH_PRESENCE_VALUE_LENTH 256
+#define PERSONA_NAME_MAX_UTF8 128
+#define PERSONA_NAME_MAX_UTF16 32
+
+// Define HTML Surface constants
+#define INVALID_HTMLBROWSER 0
+
+// Define HTTP constants
+#define HTTPCOOKIE_INVALID_HANDLE 0
+#define HTTPREQUEST_INVALID_HANDLE 0
+
+// Define Input constants
+#define INPUT_MAX_ANALOG_ACTIONS 24
+#define INPUT_MAX_ANALOG_ACTION_DATA 1.0f
+#define INPUT_MAX_COUNT 16
+#define INPUT_MAX_DIGITAL_ACTIONS 256
+#define INPUT_MAX_ORIGINS 8
+#define INPUT_MIN_ANALOG_ACTION_DATA -1.0f
+
+// Define Inventory constants
+#define INVENTORY_RESULT_INVALID -1
+#define ITEM_INSTANCE_ID_INVALID 0
+
+// Define Matchmaking constants
+#define SERVER_QUERY_INVALID 0xffffffff
+#define MAX_LOBBY_KEY_LENGTH 255
+#define FAVORITE_FLAG_FAVORITE 0x01
+#define FAVORITE_FLAG_HISTORY 0x02
+#define FAVORITE_FLAG_NONE 0x00
+
+// Define Matchmaking Servers constants
+#define MAX_GAME_SERVER_GAME_DATA 2048
+#define MAX_GAME_SERVER_GAME_DESCRIPTION 64
+#define MAX_GAME_SERVER_GAME_DIR 32
+#define MAX_GAME_SERVER_MAP_NAME 32
+#define MAX_GAME_SERVER_NAME 64
+#define MAX_GAME_SERVER_TAGS 128
+
+// Define Music Remote constants
+#define MUSIC_NAME_MAX_LENGTH 255
+#define MUSIC_PNG_MAX_LENGTH 65535
+
+// Define Networking Message constants
+#define NETWORKING_SEND_UNRELIABLE 0
+#define NETWORKING_SEND_NO_NAGLE 1
+#define NETWORKING_SEND_NO_DELAY 4
+#define NETWORKING_SEND_RELIABLE 8
+
+// Define Remote Play constants
+#define DEVICE_FORM_FACTOR_UNKNOWN 0
+#define DEVICE_FORM_FACTOR_PHONE 1
+#define DEVICE_FORM_FACTOR_TABLET 2
+#define DEVICE_FORM_FACTOR_COMPUTER 3
+#define DEVICE_FORM_FACTOR_TV 4
+
+// Define Remote Storage constants
+#define FILE_NAME_MAX 260
+#define PUBLISHED_DOCUMENT_CHANGE_DESCRIPTION_MAX 8000
+#define PUBLISHED_DOCUMENT_DESCRIPTION_MAX 8000
+#define PUBLISHED_DOCUMENT_TITLE_MAX 128 + 1
+#define PUBLISHED_FILE_URL_MAX 256
+#define TAG_LIST_MAX 1024 + 1
+#define PUBLISHED_FILE_ID_INVALID 0
+#define PUBLISHED_FILE_UPDATE_HANDLE_INVALID 0
+#define UGC_FILE_STREAM_HANDLE_INVALID 0
+#define UGC_HANDLE_INVALID 0
+#define ENUMERATE_PUBLISHED_FILES_MAX_RESULTS 50
+#define MAX_CLOUD_FILE_CHUNK_SIZE 100 * 1024 * 1024
+
+// Define Screenshot constants
+#define SCREENSHOT_INVALID_HANDLE 0
+#define UFS_TAG_TYPE_MAX 255
+#define UFS_TAG_VALUE_MAX 255
+#define MAX_TAGGED_PUBLISHED_FILES 32
+#define MAX_TAGGED_USERS 32
+#define SCREENSHOT_THUMB_WIDTH 200
+
+// Define UGC constants
+#define NUM_UGC_RESULTS_PER_PAGE 50
+#define DEVELOPER_METADATA_MAX 5000
+#define UGC_QUERY_HANDLE_INVALID 0
+#define UGC_UPDATE_HANDLE_INVALID 0
+
+// Define User Stats constants
+#define LEADERBOARD_DETAIL_MAX 64
+#define LEADERBOARD_NAME_MAX 128
+#define STAT_NAME_MAX 128
+
+/////////////////////////////////////////////////
 ///// STEAM SINGLETON? STEAM SINGLETON
 /////////////////////////////////////////////////
 //
@@ -35,7 +152,8 @@ Steam *Steam::singleton = NULL;
 ///// STEAM OBJECT WITH CALLBACKS
 /////////////////////////////////////////////////
 //
-Steam::Steam() : // Apps callbacks ////////////////////////////
+Steam::Steam() :
+		// Apps callbacks ////////////////////////////
 		callbackDLCInstalled(this, &Steam::dlc_installed),
 		callbackFileDetailsResult(this, &Steam::file_details_result),
 		callbackNewLaunchURLParameters(this, &Steam::new_launch_url_parameters),
@@ -206,6 +324,7 @@ Steam::Steam() : // Apps callbacks ////////////////////////////
 		callbackSteamShutdown(this, &Steam::steam_shutdown),
 		callbackAppResumingFromSuspend(this, &Steam::app_resuming_from_suspend),
 		callbackFloatingGamepadTextInputDismissed(this, &Steam::floating_gamepad_text_input_dismissed),
+		callbackFilterTextDictionaryChanged(this, &Steam::filter_text_dictionary_changed),
 
 		// Video callbacks //////////////////////////
 		callbackGetOPFSettingsResult(this, &Steam::get_opf_settings_result),
@@ -886,7 +1005,7 @@ int Steam::getFriendCoplayTime(uint64_t friend_id) {
 
 //! Get number of friends user has.
 int Steam::getFriendCount(int friend_flags) {
-	if(SteamFriends() == NULL) {
+	if (SteamFriends() == NULL) {
 		return 0;
 	}
 	return SteamFriends()->GetFriendCount(friend_flags);
@@ -3505,9 +3624,9 @@ bool Steam::setLobbyOwner(uint64_t steam_lobby_id, uint64_t steam_id_new_owner) 
 //
 //! Cancel an outstanding server list request.
 void Steam::cancelQuery(uint64_t this_server_list_request) {
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		// If no request list handle was passed, use the internal one
-		if(this_server_list_request == 0) {
+		if (this_server_list_request == 0) {
 			this_server_list_request = (uint64)server_list_request;
 		}
 		SteamMatchmakingServers()->CancelQuery((HServerListRequest)this_server_list_request);
@@ -3523,11 +3642,11 @@ void Steam::cancelServerQuery(int server_query) {
 
 //! Gets the number of servers in the given list.
 int Steam::getServerCount(uint64_t this_server_list_request) {
-	if(SteamMatchmakingServers() == NULL) {
+	if (SteamMatchmakingServers() == NULL) {
 		return 0;
 	}
 	// If no request list handle was passed, use the internal one
-	if(this_server_list_request == 0) {
+	if (this_server_list_request == 0) {
 		this_server_list_request = (uint64)server_list_request;
 	}
 	return SteamMatchmakingServers()->GetServerCount((HServerListRequest)this_server_list_request);
@@ -3537,12 +3656,12 @@ int Steam::getServerCount(uint64_t this_server_list_request) {
 Dictionary Steam::getServerDetails(int server, uint64_t this_server_list_request) {
 	// Create a dictionary to populate
 	Dictionary game_server;
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		// If no request list handle was passed, use the internal one
-		if(this_server_list_request == 0) {
+		if (this_server_list_request == 0) {
 			this_server_list_request = (uint64)server_list_request;
 		}
-		gameserveritem_t* server_item = new gameserveritem_t;
+		gameserveritem_t *server_item = new gameserveritem_t;
 		SteamMatchmakingServers()->GetServerDetails((HServerListRequest)this_server_list_request, server);
 		// Populate the dictionary
 		game_server["ping"] = server_item->m_nPing;
@@ -3568,11 +3687,11 @@ Dictionary Steam::getServerDetails(int server, uint64_t this_server_list_request
 
 //! Returns true if the list is currently refreshing its server list.
 bool Steam::isRefreshing(uint64_t this_server_list_request) {
-	if(SteamMatchmakingServers() == NULL) {
+	if (SteamMatchmakingServers() == NULL) {
 		return false;
 	}
 	// If no request list handle was passed, use the internal one
-	if(this_server_list_request == 0) {
+	if (this_server_list_request == 0) {
 		this_server_list_request = (uint64)server_list_request;
 	}
 	return SteamMatchmakingServers()->IsRefreshing((HServerListRequest)this_server_list_request);
@@ -3620,9 +3739,9 @@ int Steam::playerDetails(const String &ip, uint16 port) {
 
 //! Ping every server in your list again but don't update the list of servers. Query callback installed when the server list was requested will be used again to post notifications and RefreshComplete, so the callback must remain valid until another RefreshComplete is called on it or the request is released with ReleaseRequest( hRequest ).
 void Steam::refreshQuery(uint64_t this_server_list_request) {
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		// If no request list handle was passed, use the internal one
-		if(this_server_list_request == 0) {
+		if (this_server_list_request == 0) {
 			this_server_list_request = (uint64)server_list_request;
 		}
 		SteamMatchmakingServers()->RefreshQuery((HServerListRequest)this_server_list_request);
@@ -3631,9 +3750,9 @@ void Steam::refreshQuery(uint64_t this_server_list_request) {
 
 //! Refresh a single server inside of a query (rather than all the servers).
 void Steam::refreshServer(int server, uint64_t this_server_list_request) {
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		// If no request list handle was passed, use the internal one
-		if(this_server_list_request == 0) {
+		if (this_server_list_request == 0) {
 			this_server_list_request = (uint64)server_list_request;
 		}
 		SteamMatchmakingServers()->RefreshServer((HServerListRequest)this_server_list_request, server);
@@ -3642,9 +3761,9 @@ void Steam::refreshServer(int server, uint64_t this_server_list_request) {
 
 //! Releases the asynchronous request object and cancels any pending query on it if there's a pending query in progress.
 void Steam::releaseRequest(uint64_t this_server_list_request) {
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		// If no request list handle was passed, use the internal one
-		if(this_server_list_request == 0) {
+		if (this_server_list_request == 0) {
 			this_server_list_request = (uint64)server_list_request;
 		}
 		SteamMatchmakingServers()->ReleaseRequest((HServerListRequest)this_server_list_request);
@@ -3654,7 +3773,7 @@ void Steam::releaseRequest(uint64_t this_server_list_request) {
 //! Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
 uint64_t Steam::requestFavoritesServerList(uint32 app_id, Array filters) {
 	server_list_request = 0;
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		uint32 filter_size = filters.size();
 		MatchMakingKeyValuePair_t *filters_array = new MatchMakingKeyValuePair_t[filter_size];
 		for (uint32 i = 0; i < filter_size; i++) {
@@ -3688,7 +3807,7 @@ uint64_t Steam::requestFavoritesServerList(uint32 app_id, Array filters) {
 //! Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
 uint64_t Steam::requestFriendsServerList(uint32 app_id, Array filters) {
 	server_list_request = 0;
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		uint32 filter_size = filters.size();
 		MatchMakingKeyValuePair_t *filters_array = new MatchMakingKeyValuePair_t[filter_size];
 		for (uint32 i = 0; i < filter_size; i++) {
@@ -3722,7 +3841,7 @@ uint64_t Steam::requestFriendsServerList(uint32 app_id, Array filters) {
 //! Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
 uint64_t Steam::requestHistoryServerList(uint32 app_id, Array filters) {
 	server_list_request = 0;
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		uint32 filter_size = filters.size();
 		MatchMakingKeyValuePair_t *filters_array = new MatchMakingKeyValuePair_t[filter_size];
 		for (uint32 i = 0; i < filter_size; i++) {
@@ -3756,7 +3875,7 @@ uint64_t Steam::requestHistoryServerList(uint32 app_id, Array filters) {
 //! Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
 uint64_t Steam::requestInternetServerList(uint32 app_id, Array filters) {
 	server_list_request = 0;
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		uint32 filter_size = filters.size();
 		MatchMakingKeyValuePair_t *filters_array = new MatchMakingKeyValuePair_t[filter_size];
 		for (uint32 i = 0; i < filter_size; i++) {
@@ -3790,7 +3909,7 @@ uint64_t Steam::requestInternetServerList(uint32 app_id, Array filters) {
 //! Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
 uint64_t Steam::requestLANServerList(uint32 app_id) {
 	server_list_request = 0;
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		server_list_request = SteamMatchmakingServers()->RequestLANServerList((AppId_t)app_id, server_list_response);
 	}
 	return (uint64)server_list_request;
@@ -3799,7 +3918,7 @@ uint64_t Steam::requestLANServerList(uint32 app_id) {
 //! Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
 uint64_t Steam::requestSpectatorServerList(uint32 app_id, Array filters) {
 	server_list_request = 0;
-	if(SteamMatchmakingServers() != NULL) {
+	if (SteamMatchmakingServers() != NULL) {
 		uint32 filter_size = filters.size();
 		MatchMakingKeyValuePair_t *filters_array = new MatchMakingKeyValuePair_t[filter_size];
 		for (uint32 i = 0; i < filter_size; i++) {
@@ -4998,7 +5117,7 @@ uint32 Steam::createListenSocketP2PFakeIP(int fake_port, Array options) {
 	if (SteamNetworkingSockets() == NULL) {
 		return 0;
 	}
-	
+
 	const SteamNetworkingConfigValue_t *these_options = convertOptionsArray(options);
 	uint32 listen_socket = SteamNetworkingSockets()->CreateListenSocketP2PFakeIP(fake_port, options.size(), these_options);
 	delete[] these_options;
@@ -6265,6 +6384,13 @@ void Steam::addAppDependency(uint64_t published_file_id, uint32_t app_id) {
 	}
 }
 
+bool Steam::addContentDescriptor(uint64_t update_handle, int descriptor_id) {
+	if (SteamUGC() == NULL) {
+		return false;
+	}
+	return SteamUGC()->AddContentDescriptor((UGCUpdateHandle_t)update_handle, (EUGCContentDescriptorID)descriptor_id);
+}
+
 //! Adds a workshop item as a dependency to the specified item. If the nParentPublishedFileID item is of type k_EWorkshopFileTypeCollection, than the nChildPublishedFileID is simply added to that collection.
 //! Otherwise, the dependency is a soft one that is displayed on the web and can be retrieved via the ISteamUGC API using a combination of the m_unNumChildren member variable of the SteamUGCDetails_t struct and GetQueryUGCChildren.
 void Steam::addDependency(uint64_t published_file_id, uint64_t child_published_file_id) {
@@ -6707,6 +6833,26 @@ Dictionary Steam::getQueryUGCChildren(uint64_t query_handle, uint32 index, uint3
 	return children;
 }
 
+Dictionary Steam::getQueryUGCContentDescriptors(uint64_t query_handle, uint32 index, uint32_t max_entries) {
+	Dictionary descriptors;
+	if (SteamUGC() != NULL) {
+		UGCQueryHandle_t handle = (uint64_t)query_handle;
+		PackedVector2Array vec;
+		vec.resize(max_entries);
+		uint32_t result = SteamUGC()->GetQueryUGCContentDescriptors(handle, index, (EUGCContentDescriptorID *)vec.ptrw(), max_entries);
+		Array descriptor_array;
+		descriptor_array.resize(max_entries);
+		for (uint32_t i = 0; i < max_entries; i++) {
+			descriptor_array[i] = vec[i];
+		}
+		descriptors["result"] = result;
+		descriptors["handle"] = (uint64_t)handle;
+		descriptors["index"] = index;
+		descriptors["descriptors"] = descriptor_array;
+	}
+	return descriptors;
+}
+
 //! Retrieve the details of a key-value tag associated with an individual workshop item after receiving a querying UGC call result.
 Dictionary Steam::getQueryUGCKeyValueTag(uint64_t query_handle, uint32 index, uint32 key_value_tag_index) {
 	Dictionary tag;
@@ -6948,6 +7094,13 @@ void Steam::removeAppDependency(uint64_t published_file_id, uint32_t app_id) {
 		SteamAPICall_t api_call = SteamUGC()->RemoveAppDependency(file_id, app);
 		callResultRemoveAppDependency.Set(api_call, this, &Steam::remove_app_dependency_result);
 	}
+}
+
+bool Steam::removeContentDescriptor(uint64_t update_handle, int descriptor_id) {
+	if (SteamUGC() == NULL) {
+		return false;
+	}
+	return SteamUGC()->RemoveContentDescriptor((UGCUpdateHandle_t)update_handle, (EUGCContentDescriptorID)descriptor_id);
 }
 
 //! Removes a workshop item as a dependency from the specified item.
@@ -7423,7 +7576,7 @@ Dictionary Steam::decompressVoice(const PackedByteArray &voice, uint32 voice_siz
 		PackedByteArray outputBuffer;
 		outputBuffer.resize(20480); // 20KiB buffer
 		int result = SteamUser()->DecompressVoice(voice.ptr(), voice_size, outputBuffer.ptrw(), outputBuffer.size(), &written, sample_rate);
-		if(result == 0) {
+		if (result == 0) {
 			decompressed["uncompressed"] = outputBuffer;
 			decompressed["size"] = written;
 		}
@@ -7441,14 +7594,15 @@ void Steam::endAuthSession(uint64_t steam_id) {
 }
 
 //! Get the authentication ticket data.
-Dictionary Steam::getAuthSessionTicket() {
+Dictionary Steam::getAuthSessionTicket(const String &identity_reference) {
 	// Create the dictionary to use
 	Dictionary auth_ticket;
 	if (SteamUser() != NULL) {
+		const SteamNetworkingIdentity identity = networking_identities[identity_reference.utf8().get_data()];
 		uint32_t ticket_size = 1024;
 		PackedByteArray buffer;
 		buffer.resize(ticket_size);
-		uint32_t id = SteamUser()->GetAuthSessionTicket(buffer.ptrw(), ticket_size, &ticket_size);
+		uint32_t id = SteamUser()->GetAuthSessionTicket(buffer.ptrw(), ticket_size, &ticket_size, &identity);
 		// Add this data to the dictionary
 		auth_ticket["id"] = id;
 		auth_ticket["buffer"] = buffer;
@@ -8720,10 +8874,12 @@ void Steam::join_requested(GameLobbyJoinRequested_t *call_data) {
 
 //! Posted when the Steam Overlay activates or deactivates. The game can use this to be pause or resume single player games.
 void Steam::overlay_toggled(GameOverlayActivated_t *call_data) {
+	bool user_initiated = call_data->m_bUserInitiated;
+	uint32_t app_id = call_data->m_nAppID;
 	if (call_data->m_bActive) {
-		emit_signal("overlay_toggled", true);
+		emit_signal("overlay_toggled", true, user_initiated, app_id);
 	} else {
-		emit_signal("overlay_toggled", false);
+		emit_signal("overlay_toggled", false, user_initiated, app_id);
 	}
 }
 
@@ -9692,14 +9848,16 @@ void Steam::user_stats_unloaded(UserStatsUnloaded_t *call_data) {
 //
 //! Called when the big picture gamepad text input has been closed.
 void Steam::gamepad_text_input_dismissed(GamepadTextInputDismissed_t *call_data) {
+	bool was_submitted = call_data->m_bSubmitted;
 	const uint32 buffer_length = 1024 + 1;
 	char *text = new char[buffer_length];
 	uint32 length = buffer_length;
-	if (call_data->m_bSubmitted) {
+	uint32_t app_id = call_data->m_unAppID;
+	if (was_submitted) {
 		SteamUtils()->GetEnteredGamepadTextInput(text, buffer_length);
 		length = SteamUtils()->GetEnteredGamepadTextLength();
 	}
-	emit_signal("gamepad_text_input_dismissed", call_data->m_bSubmitted, String::utf8(text, (int)length));
+	emit_signal("gamepad_text_input_dismissed", was_submitted, String::utf8(text, (int)length), app_id);
 	delete[] text;
 }
 
@@ -9735,6 +9893,12 @@ void Steam::app_resuming_from_suspend(AppResumingFromSuspend_t *call_data) {
 //! Sent after the device returns from sleep/suspend mode.
 void Steam::floating_gamepad_text_input_dismissed(FloatingGamepadTextInputDismissed_t *call_data) {
 	emit_signal("floating_gamepad_text_input_dismissed");
+}
+
+// The text filtering dictionary has changed, obviously.
+void Steam::filter_text_dictionary_changed(FilterTextDictionaryChanged_t *call_data) {
+	int language = call_data->m_eLanguage;
+	emit_signal("filter_text_dictionary_changed", language);
 }
 
 // VIDEO CALLBACKS //////////////////////////////
@@ -11132,6 +11296,7 @@ void Steam::_bind_methods() {
 
 	// UGC BIND METHODS ////////////////////
 	ClassDB::bind_method(D_METHOD("addAppDependency", "published_file_id", "app_id"), &Steam::addAppDependency);
+	ClassDB::bind_method(D_METHOD("addContentDescriptor", "update_handle", "descriptor_id"), &Steam::addContentDescriptor);
 	ClassDB::bind_method(D_METHOD("addDependency", "published_file_id", "child_published_file_id"), &Steam::addDependency);
 	ClassDB::bind_method(D_METHOD("addExcludedTag", "query_handle", "tag_name"), &Steam::addExcludedTag);
 	ClassDB::bind_method(D_METHOD("addItemKeyValueTag", "query_handle", "key", "value"), &Steam::addItemKeyValueTag);
@@ -11169,6 +11334,7 @@ void Steam::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("getUserItemVote", "published_file_id"), &Steam::getUserItemVote);
 	ClassDB::bind_method(D_METHOD("releaseQueryUGCRequest", "query_handle"), &Steam::releaseQueryUGCRequest);
 	ClassDB::bind_method(D_METHOD("removeAppDependency", "published_file_id", "app_id"), &Steam::removeAppDependency);
+	ClassDB::bind_method(D_METHOD("removeContentDescriptor", "update_handle", "descriptor_id"), &Steam::removeContentDescriptor);
 	ClassDB::bind_method(D_METHOD("removeDependency", "published_file_id", "child_published_file_id"), &Steam::removeDependency);
 	ClassDB::bind_method(D_METHOD("removeItemFromFavorites", "app_id", "published_file_id"), &Steam::removeItemFromFavorites);
 	ClassDB::bind_method(D_METHOD("removeItemKeyValueTags", "update_handle", "key"), &Steam::removeItemKeyValueTags);
@@ -11219,7 +11385,7 @@ void Steam::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("cancelAuthTicket", "auth_ticket"), &Steam::cancelAuthTicket);
 	ClassDB::bind_method(D_METHOD("decompressVoice", "voice", "voice_size", "sample_rate"), &Steam::decompressVoice);
 	ClassDB::bind_method(D_METHOD("endAuthSession", "steam_id"), &Steam::endAuthSession);
-	ClassDB::bind_method("getAuthSessionTicket", &Steam::getAuthSessionTicket);
+	ClassDB::bind_method(D_METHOD("getAuthSessionTicket", "identity_reference"), &Steam::getAuthSessionTicket);
 	ClassDB::bind_method("getAvailableVoice", &Steam::getAvailableVoice);
 	ClassDB::bind_method("getDurationControl", &Steam::getDurationControl);
 	ClassDB::bind_method("getEncryptedAppTicket", &Steam::getEncryptedAppTicket);
@@ -11359,7 +11525,7 @@ void Steam::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("connected_clan_chat_message", PropertyInfo(Variant::DICTIONARY, "chat")));
 	ADD_SIGNAL(MethodInfo("connected_friend_chat_message", PropertyInfo(Variant::DICTIONARY, "chat")));
 	ADD_SIGNAL(MethodInfo("join_requested", PropertyInfo(Variant::INT, "lobby_id"), PropertyInfo(Variant::INT, "steam_id")));
-	ADD_SIGNAL(MethodInfo("overlay_toggled", PropertyInfo(Variant::BOOL, "active")));
+	ADD_SIGNAL(MethodInfo("overlay_toggled", PropertyInfo(Variant::BOOL, "active"), PropertyInfo(Variant::BOOL, "user_initiated"), PropertyInfo(Variant::INT, "app_id")));
 	ADD_SIGNAL(MethodInfo("join_game_requested", PropertyInfo(Variant::INT, "user"), PropertyInfo(Variant::STRING, "connect")));
 	ADD_SIGNAL(MethodInfo("change_server_requested", PropertyInfo(Variant::STRING, "server"), PropertyInfo(Variant::STRING, "password")));
 	ADD_SIGNAL(MethodInfo("join_clan_chat_complete", PropertyInfo(Variant::INT, "chat_id"), PropertyInfo(Variant::INT, "response")));
@@ -11550,13 +11716,14 @@ void Steam::_bind_methods() {
 
 	// UTILITY SIGNALS //////////////////////////
 	ADD_SIGNAL(MethodInfo("check_file_signature", PropertyInfo(Variant::STRING, "signature")));
-	ADD_SIGNAL(MethodInfo("gamepad_text_input_dismissed", PropertyInfo(Variant::BOOL, "submitted"), PropertyInfo(Variant::STRING, "entered_text")));
+	ADD_SIGNAL(MethodInfo("gamepad_text_input_dismissed", PropertyInfo(Variant::BOOL, "submitted"), PropertyInfo(Variant::STRING, "entered_text"), PropertyInfo(Variant::INT, "app_id")));
 	ADD_SIGNAL(MethodInfo("ip_country"));
 	ADD_SIGNAL(MethodInfo("low_power", PropertyInfo(Variant::INT, "power")));
 	ADD_SIGNAL(MethodInfo("steam_api_call_completed", PropertyInfo(Variant::INT, "async_call"), PropertyInfo(Variant::INT, "callback"), PropertyInfo(Variant::INT, "parameter")));
 	ADD_SIGNAL(MethodInfo("steam_shutdown"));
 	ADD_SIGNAL(MethodInfo("app_resuming_from_suspend"));
 	ADD_SIGNAL(MethodInfo("floating_gamepad_text_input_dismissed"));
+	ADD_SIGNAL(MethodInfo("filter_text_dictionary_changed", PropertyInfo(Variant::INT, "language")));
 
 	// VIDEO SIGNALS ////////////////////////////
 	ADD_SIGNAL(MethodInfo("get_opf_settings_result", PropertyInfo(Variant::INT, "result"), PropertyInfo(Variant::INT, "app_id")));
@@ -12005,13 +12172,6 @@ void Steam::_bind_methods() {
 	BIND_ENUM_CONSTANT(VR_HMD_TYPE_OCULUS_RIFT); // 23
 	BIND_ENUM_CONSTANT(VR_HMD_TYPE_OCULUS_UNKNOWN); // 40
 
-	// REGISTER ACTIVATION CODE RESULTS//////////
-	BIND_ENUM_CONSTANT(ACTIVATION_CODE_RESULT_OK); // 0
-	BIND_ENUM_CONSTANT(ACTIVATION_CODE_RESULT_FAIL); // 1
-	BIND_ENUM_CONSTANT(ACTIVATION_CODE_RESULT_ALREADY_REGISTERED); // 2
-	BIND_ENUM_CONSTANT(ACTIVATION_CODE_RESULT_TIMEOUT); // 3
-	BIND_ENUM_CONSTANT(ACTIVATION_CODE_RESULT_ALREADY_OWNED); // 4
-
 	// AVATAR ///////////////////////////////////
 	BIND_ENUM_CONSTANT(AVATAR_SMALL); // 1
 	BIND_ENUM_CONSTANT(AVATAR_MEDIUM); // 2
@@ -12217,386 +12377,414 @@ void Steam::_bind_methods() {
 	BIND_ENUM_CONSTANT(HTTP_STATUS_CODE_5XX_UNKNOWN); // 599
 
 	// INPUT ACTION ORIGIN //////////////////////
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_NONE); // 0
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_A); // 1
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_B); // 2
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_X); // 3
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_Y); // 4
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_BUMPER); // 5
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_BUMPER); // 6
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFTGRIP); // 7
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHTGRIP); // 8
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_START); // 9
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_BACK); // 10
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_TOUCH); // 11
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_SWIPE); // 12
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_CLICK); // 13
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_DPAD_NORTH); // 14
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_DPAD_SOUTH); // 15
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_DPAD_WEST); // 16
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_DPAD_EAST); // 17
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_TOUCH); // 18
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_SWIPE); // 19
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_CLICK); // 20
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_DPAD_NORTH); // 21
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_DPAD_SOUTH); // 22
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_DPAD_WEST); // 23
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_DPAD_EAST); // 24
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_TRIGGER_PULL); // 25
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_TRIGGER_CLICK); // 26
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_TRIGGER_PULL); // 27
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_TRIGGER_CLICK); // 28
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_MOVE); // 29
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_CLICK); // 30
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_DPAD_NORTH); // 31
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_DPAD_SOUTH); // 32
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_DPAD_WEST); // 33
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_DPAD_EAST); // 34
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_GYRO_MOVE); // 35
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_GYRO_PITCH); // 36
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_GYRO_YAW); // 37
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_GYRO_ROLL); // 38
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED0); // 39
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED1); // 40
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED2); // 41
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED3); // 42
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED4); // 43
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED5); // 44
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED6); // 45
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED7); // 46
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED8); // 47
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED9); // 48
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED10); // 49
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_X); // 50
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CIRCLE); // 51
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_TRIANGLE); // 52
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_SQUARE); // 53
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_BUMPER); // 54
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_BUMPER); // 55
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_OPTIONS); // 56
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_SHARE); // 57
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_TOUCH); // 58
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_SWIPE); // 59
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_CLICK); // 60
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_DPAD_NORTH); // 61
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_DPAD_SOUTH); // 62
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_DPAD_WEST); // 63
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_DPAD_EAST); // 64
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_TOUCH); // 65
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_SWIPE); // 66
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_CLICK); // 67
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_DPAD_NORTH); // 68
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_DPAD_SOUTH); // 69
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_DPAD_WEST); // 70
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_DPAD_EAST); // 71
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_TOUCH); // 72
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_SWIPE); // 73
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_CLICK); // 74
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_DPAD_NORTH); // 75
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_DPAD_SOUTH); // 76
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_DPAD_WEST); // 77
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_DPAD_EAST); // 78
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_TRIGGER_PULL); // 79
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_TRIGGER_CLICK); // 80
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_TRIGGER_PULL); // 81
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_TRIGGER_CLICK); // 82
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_MOVE); // 83
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_CLICK); // 84
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_DPAD_NORTH); // 85
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_DPAD_SOUTH); // 86
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_DPAD_WEST); // 87
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_DPAD_EAST); // 88
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_MOVE); // 89
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_CLICK); // 90
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_DPAD_NORTH); // 91
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_DPAD_SOUTH); // 92
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_DPAD_WEST); // 93
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_DPAD_EAST); // 94
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_DPAD_NORTH); // 95
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_DPAD_SOUTH); // 96
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_DPAD_WEST); // 97
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_DPAD_EAST); // 98
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_GYRO_MOVE); // 99
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_GYRO_PITCH); // 100
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_GYRO_YAW); // 101
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_GYRO_ROLL); // 102
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED0); // 103
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED1); // 104
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED2); // 105
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED3); // 106
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED4); // 107
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED5); // 108
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED6); // 109
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED7); // 110
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED8); // 111
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED9); // 112
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED10); // 113
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_A); // 114
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_B); // 115
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_X); // 116
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_Y); // 117
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_BUMPER); // 118
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_BUMPER); // 119
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_MENU); // 120
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_VIEW); // 121
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_TRIGGER_PULL); // 122
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_TRIGGER_CLICK); // 123
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_TRIGGER_PULL); // 124
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_TRIGGER_CLICK); // 125
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_MOVE); // 126
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_CLICK); // 127
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_DPAD_NORTH); // 128
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_DPAD_SOUTH); // 129
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_DPAD_WEST); // 130
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_DPAD_EAST); // 131
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_MOVE); // 132
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_CLICK); // 133
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_DPAD_NORTH); // 134
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_DPAD_SOUTH); // 135
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_DPAD_WEST); // 136
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_DPAD_EAST); // 137
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_DPAD_NORTH); // 138
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_DPAD_SOUTH); // 139
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_DPAD_WEST); // 140
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_DPAD_EAST); // 141
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED0); // 142
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED1); // 143
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED2); // 144
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED3); // 145
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED4); // 146
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED5); // 147
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED6); // 148
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED7); // 149
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED8); // 150
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED9); // 151
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED10); // 152
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_A); // 153
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_B); // 154
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_X); // 155
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_Y); // 156
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_BUMPER); // 157
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_BUMPER); // 158
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_START); // 159
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_BACK); // 160
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_TRIGGER_PULL); // 161
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_TRIGGER_CLICK); // 162
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_TRIGGER_PULL); // 163
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_TRIGGER_CLICK); // 164
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_MOVE); // 165
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_CLICK); // 166
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_DPAD_NORTH); // 167
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_DPAD_SOUTH); // 168
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_DPAD_WEST); // 169
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_DPAD_EAST); // 170
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_MOVE); // 171
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_CLICK); // 172
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_DPAD_NORTH); // 173
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_DPAD_SOUTH); // 174
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_DPAD_WEST); // 175
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_DPAD_EAST); // 176
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_DPAD_NORTH); // 177
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_DPAD_SOUTH); // 178
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_DPAD_WEST); // 179
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_DPAD_EAST); // 180
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED0); // 181
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED1); // 182
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED2); // 183
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED3); // 184
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED4); // 185
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED5); // 186
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED6); // 187
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED7); // 188
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED8); // 189
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED9); // 190
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED10); // 191
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_A); // 192
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_B); // 193
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_X); // 194
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_Y); // 195
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_BUMPER); // 196
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_BUMPER); // 197
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PLUS); // 198
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_MINUS); // 199
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_CAPTURE); // 200
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_TRIGGER_PULL); // 201
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_TRIGGER_CLICK); // 202
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_TRIGGER_PULL); // 203
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_TRIGGER_CLICK); // 204
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_MOVE); // 205
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_CLICK); // 206
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_DPAD_NORTH); // 207
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_DPAD_SOUTH); // 208
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_DPAD_WEST); // 209
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_DPAD_EAST); // 210
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_MOVE); // 211
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_CLICK); // 212
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_DPAD_NORTH); // 213
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_DPAD_SOUTH); // 214
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_DPAD_WEST); // 215
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_DPAD_EAST); // 216
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_DPAD_NORTH); // 217
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_DPAD_SOUTH); // 218
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_DPAD_WEST); // 219
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_DPAD_EAST); // 220
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PRO_GYRO_MOVE); // 221
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PRO_GYRO_PITCH); // 222
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PRO_GYRO_YAW); // 223
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PRO_GYRO_ROLL); // 224
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED0); // 225
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED1); // 226
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED2); // 227
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED3); // 228
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED4); // 229
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED5); // 230
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED6); // 231
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED7); // 232
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED8); // 233
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED9); // 234
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED10); // 235
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_OPTION); // 242
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CREATE); // 243
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_MUTE); // 244
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_TOUCH); // 245
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_SWIPE); // 246
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_CLICK); // 247
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_DPADNORTH); // 248
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_DPADSOUTH); // 249
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_DPADWEST); // 250
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_DPADEAST); // 251
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_TOUCH); // 252
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_SWIPE); // 253
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_CLICK); // 254
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_DPADNORTH); // 255
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_DPADSOUTH); // 256
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_DPADWEST); // 257
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_DPADEAST); // 258
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_TOUCH); // 259
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_SWIPE); // 260
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_CLICK); // 261
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_DPADNORTH); // 262
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_DPADSOUTH); // 263
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_DPADWEST); // 264
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_DPADEAST); // 265
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTTRIGGER_PULL); // 266
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTTRIGGER_CLICK); // 267
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTTRIGGER_PULL); // 268
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTTRIGGER_CLICK); // 269
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_MOVE); // 270
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_CLICK); // 271
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_DPADNORTH); // 272
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_DPADSOUTH); // 273
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_DPADWEST); // 274
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_DPADEAST); // 275
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_MOVE); // 276
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_CLICK); // 277
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_DPADNORTH); // 278
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_DPADSOUTH); // 279
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_DPADWEST); // 280
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_DPADEAST); // 281
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_NORTH); // 282
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_SOUTH); // 283
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_WEST); // 284
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_EAST); // 285
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_GYRO_MOVE); // 286
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_GYRO_PITCH); // 287
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_GYRO_YAW); // 288
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_GYRO_ROLL); // 289
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_MOVE); // 290
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED1); // 291
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED2); // 292
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED3); // 293
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED4); // 294
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED5); // 295
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED6); // 296
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED7); // 297
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED8); // 298
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED9); // 299
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED10); // 300
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED11); // 301
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED12); // 302
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED13); // 303
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED14); // 304
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED15); // 305
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED16); // 306
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED17); // 307
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED18); // 308
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED19); // 309
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED20); // 310
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_A); // 311
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_B); // 312
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_X); // 313
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_Y); // 314
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L1); // 315
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R1); // 316
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_MENU); // 317
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_VIEW); // 318
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_TOUCH); // 319
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_SWIPE); // 320
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_CLICK); // 321
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_DPADNORTH); // 322
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_DPADSOUTH); // 323
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_DPADWEST); // 324
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_DPADEAST); // 325
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_TOUCH); // 326
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_SWIPE); // 327
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_CLICK); // 328
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_DPADNORTH); // 329
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_DPADSOUTH); // 330
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_DPADWEST); // 331
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_DPADEAST); // 332
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L2_SOFTPULL); // 333
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L2); // 334
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R2_SOFTPULL); // 335
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R2); // 336
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_MOVE); // 337
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L3); // 338
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_DPADNORTH); // 339
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_DPADSOUTH); // 340
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_DPADWEST); // 341
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_DPADEAST); // 342
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_TOUCH); // 343
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_MOVE); // 344
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R3); // 345
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_DPADNORTH); // 346
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_DPADSOUTH); // 347
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_DPADWEST); // 348
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_DPADEAST); // 349
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_TOUCH); // 350
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L4); // 351
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R4); // 352
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L5); // 353
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R5); // 354
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_MOVE); // 355
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_NORTH); // 356
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_SOUTH); // 357
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_WEST); // 358
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_EAST); // 359
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_GYRO_MOVE); // 360
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_GYRO_PITCH); // 361
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_GYRO_YAW); // 362
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_GYRO_ROLL); // 363
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED1); // 364
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED2); // 365
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED3); // 366
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED4); // 367
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED5); // 368
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED6); // 369
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED7); // 370
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED8); // 371
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED9); // 372
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED10); // 373
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED11); // 374
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED12); // 375
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED13); // 376
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED14); // 377
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED15); // 378
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED16); // 379
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED17); // 380
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED18); // 381
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED19); // 382
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED20); // 383
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_COUNT); // 384
-	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_MAXIMUMPOSSIBLEVALUE); // 32767
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_NONE); //  0
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_A); //  1
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_B); //  2
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_X); //  3
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_Y); //  4
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_BUMPER); //  5
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_BUMPER); //  6
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFTGRIP); //  7
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHTGRIP); //  8
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_START); //  9
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_BACK); //  10
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_TOUCH); //  11
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_SWIPE); //  12
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_CLICK); //  13
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_DPAD_NORTH); //  14
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_DPAD_SOUTH); //  15
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_DPAD_WEST); //  16
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_PAD_DPAD_EAST); //  17
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_TOUCH); //  18
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_SWIPE); //  19
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_CLICK); //  20
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_DPAD_NORTH); //  21
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_DPAD_SOUTH); //  22
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_DPAD_WEST); //  23
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_PAD_DPAD_EAST); //  24
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_TRIGGER_PULL); //  25
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_TRIGGER_CLICK); //  26
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_TRIGGER_PULL); //  27
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_RIGHT_TRIGGER_CLICK); //  28
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_MOVE); //  29
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_CLICK); //  30
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_DPAD_NORTH); //  31
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_DPAD_SOUTH); //  32
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_DPAD_WEST); //  33
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_LEFT_STICK_DPAD_EAST); //  34
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_GYRO_MOVE); //  35
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_GYRO_PITCH); //  36
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_GYRO_YAW); //  37
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_GYRO_ROLL); //  38
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED0); //  39
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED1); //  40
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED2); //  41
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED3); //  42
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED4); //  43
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED5); //  44
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED6); //  45
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED7); //  46
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED8); //  47
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED9); //  48
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAM_CONTROLLER_RESERVED10); //  49
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_X); //  50
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CIRCLE); //  51
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_TRIANGLE); //  52
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_SQUARE); //  53
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_BUMPER); //  54
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_BUMPER); //  55
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_OPTIONS); //  56
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_SHARE); //  57
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_TOUCH); //  58
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_SWIPE); //  59
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_CLICK); //  60
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_DPAD_NORTH); //  61
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_DPAD_SOUTH); //  62
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_DPAD_WEST); //  63
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_PAD_DPAD_EAST); //  64
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_TOUCH); //  65
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_SWIPE); //  66
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_CLICK); //  67
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_DPAD_NORTH); //  68
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_DPAD_SOUTH); //  69
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_DPAD_WEST); //  70
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_PAD_DPAD_EAST); //  71
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_TOUCH); //  72
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_SWIPE); //  73
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_CLICK); //  74
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_DPAD_NORTH); //  75
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_DPAD_SOUTH); //  76
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_DPAD_WEST); //  77
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_CENTER_PAD_DPAD_EAST); //  78
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_TRIGGER_PULL); //  79
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_TRIGGER_CLICK); //  80
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_TRIGGER_PULL); //  81
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_TRIGGER_CLICK); //  82
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_MOVE); //  83
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_CLICK); //  84
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_DPAD_NORTH); //  85
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_DPAD_SOUTH); //  86
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_DPAD_WEST); //  87
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_LEFT_STICK_DPAD_EAST); //  88
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_MOVE); //  89
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_CLICK); //  90
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_DPAD_NORTH); //  91
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_DPAD_SOUTH); //  92
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_DPAD_WEST); //  93
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RIGHT_STICK_DPAD_EAST); //  94
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_DPAD_NORTH); //  95
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_DPAD_SOUTH); //  96
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_DPAD_WEST); //  97
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_DPAD_EAST); //  98
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_GYRO_MOVE); //  99
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_GYRO_PITCH); //  100
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_GYRO_YAW); //  101
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_GYRO_ROLL); //  102
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED0); //  103
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED1); //  104
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED2); //  105
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED3); //  106
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED4); //  107
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED5); //  108
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED6); //  109
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED7); //  110
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED8); //  111
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED9); //  112
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS4_RESERVED10); //  113
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_A); //  114
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_B); //  115
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_X); //  116
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_Y); //  117
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_BUMPER); //  118
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_BUMPER); //  119
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_MENU); //  120
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_VIEW); //  121
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_TRIGGER_PULL); //  122
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_TRIGGER_CLICK); //  123
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_TRIGGER_PULL); //  124
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_TRIGGER_CLICK); //  125
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_MOVE); //  126
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_CLICK); //  127
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_DPAD_NORTH); //  128
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_DPAD_SOUTH); //  129
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_DPAD_WEST); //  130
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_LEFT_STICK_DPAD_EAST); //  131
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_MOVE); //  132
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_CLICK); //  133
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_DPAD_NORTH); //  134
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_DPAD_SOUTH); //  135
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_DPAD_WEST); //  136
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RIGHT_STICK_DPAD_EAST); //  137
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_DPAD_NORTH); //  138
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_DPAD_SOUTH); //  139
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_DPAD_WEST); //  140
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_DPAD_EAST); //  141
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED0); //  142
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED1); //  143
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED2); //  144
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED3); //  145
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED4); //  146
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED5); //  147
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED6); //  148
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED7); //  149
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED8); //  150
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED9); //  151
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_ONE_RESERVED10); //  152
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_A); //  153
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_B); //  154
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_X); //  155
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_Y); //  156
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_BUMPER); //  157
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_BUMPER); //  158
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_START); //  159
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_BACK); //  160
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_TRIGGER_PULL); //  161
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_TRIGGER_CLICK); //  162
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_TRIGGER_PULL); //  163
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_TRIGGER_CLICK); //  164
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_MOVE); //  165
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_CLICK); //  166
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_DPAD_NORTH); //  167
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_DPAD_SOUTH); //  168
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_DPAD_WEST); //  169
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_LEFT_STICK_DPAD_EAST); //  170
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_MOVE); //  171
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_CLICK); //  172
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_DPAD_NORTH); //  173
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_DPAD_SOUTH); //  174
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_DPAD_WEST); //  175
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RIGHT_STICK_DPAD_EAST); //  176
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_DPAD_NORTH); //  177
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_DPAD_SOUTH); //  178
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_DPAD_WEST); //  179
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_DPAD_EAST); //  180
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED0); //  181
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED1); //  182
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED2); //  183
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED3); //  184
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED4); //  185
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED5); //  186
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED6); //  187
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED7); //  188
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED8); //  189
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED9); //  190
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_XBOX_360_RESERVED10); //  191
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_A); //  192
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_B); //  193
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_X); //  194
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_Y); //  195
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_BUMPER); //  196
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_BUMPER); //  197
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PLUS); //  198
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_MINUS); //  199
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_CAPTURE); //  200
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_TRIGGER_PULL); //  201
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_TRIGGER_CLICK); //  202
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_TRIGGER_PULL); //  203
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_TRIGGER_CLICK); //  204
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_MOVE); //  205
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_CLICK); //  206
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_DPAD_NORTH); //  207
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_DPAD_SOUTH); //  208
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_DPAD_WEST); //  209
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFT_STICK_DPAD_EAST); //  210
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_MOVE); //  211
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_CLICK); //  212
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_DPAD_NORTH); //  213
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_DPAD_SOUTH); //  214
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_DPAD_WEST); //  215
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHT_STICK_DPAD_EAST); //  216
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_DPAD_NORTH); //  217
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_DPAD_SOUTH); //  218
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_DPAD_WEST); //  219
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_DPAD_EAST); //  220
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PRO_GYRO_MOVE); //  221
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PRO_GYRO_PITCH); //  222
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PRO_GYRO_YAW); //  223
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_PRO_GYRO_ROLL); //  224
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED0); //  225
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED1); //  226
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED2); //  227
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED3); //  228
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED4); //  229
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED5); //  230
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED6); //  231
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED7); //  232
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED8); //  233
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED9); //  234
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED10); //  235
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHTGYRO_MOVE); //  236
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHTGYRO_PITCH); //  237
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHTGYRO_YAW); //  238
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHTGYRO_ROLL); //  239
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFTGYRO_MOVE); //  240
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFTGYRO_PITCH); //  241
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFTGYRO_YAW); //  242
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFTGYRO_ROLL); //  243
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFTGRIP_LOWER); //  244
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_LEFTGRIP_UPPER); //  245
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHTGRIP_LOWER); //  246
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RIGHTGRIP_UPPER); //  247
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_JOYCON_BUTTON_N); //  248
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_JOYCON_BUTTON_E); //  249
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_JOYCON_BUTTON_S); //  250
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_JOYCON_BUTTON_W); //  251
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED15); //  252
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED16); //  253
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED17); //  254
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED18); //  255
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED19); //  256
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_SWITCH_RESERVED20); //  257
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_X); //  258
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CIRCLE); //  259
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_TRIANGLE); //  260
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_SQUARE); //  261
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTBUMPER); //  262
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTBUMPER); //  263
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_OPTION); //  264
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CREATE); //  265
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_MUTE); //  266
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_TOUCH); //  267
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_SWIPE); //  268
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_CLICK); //  269
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_DPADNORTH); //  270
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_DPADSOUTH); //  271
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_DPADWEST); //  272
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTPAD_DPADEAST); //  273
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_TOUCH); //  274
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_SWIPE); //  275
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_CLICK); //  276
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_DPADNORTH); //  277
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_DPADSOUTH); //  278
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_DPADWEST); //  279
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTPAD_DPADEAST); //  280
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_TOUCH); //  281
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_SWIPE); //  282
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_CLICK); //  283
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_DPADNORTH); //  284
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_DPADSOUTH); //  285
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_DPADWEST); //  286
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_CENTERPAD_DPADEAST); //  287
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTTRIGGER_PULL); //  288
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTTRIGGER_CLICK); //  289
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTTRIGGER_PULL); //  290
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTTRIGGER_CLICK); //  291
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_MOVE); //  292
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_CLICK); //  293
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_DPADNORTH); //  294
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_DPADSOUTH); //  295
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_DPADWEST); //  296
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTSTICK_DPADEAST); //  297
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_MOVE); //  298
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_CLICK); //  299
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_DPADNORTH); //  300
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_DPADSOUTH); //  301
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_DPADWEST); //  302
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTSTICK_DPADEAST); //  303
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_NORTH); //  304
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_SOUTH); //  305
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_WEST); //  306
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_EAST); //  307
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_GYRO_MOVE); //  308
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_GYRO_PITCH); //  309
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_GYRO_YAW); //  310
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_GYRO_ROLL); //  311
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_DPAD_MOVE); //  312
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTGRIP); //  313
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTGRIP); //  314
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_LEFTFN); //  315
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RIGHTFN); //  316
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED5); //  317
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED6); //  318
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED7); //  319
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED8); //  320
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED9); //  321
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED10); //  322
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED11); //  323
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED12); //  324
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED13); //  325
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED14); //  326
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED15); //  327
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED16); //  328
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED17); //  329
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED18); //  330
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED19); //  331
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_PS5_RESERVED20); //  332
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_A); //  333
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_B); //  334
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_X); //  335
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_Y); //  336
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L1); //  337
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R1); //  338
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_MENU); //  339
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_VIEW); //  340
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_TOUCH); //  341
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_SWIPE); //  342
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_CLICK); //  343
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_DPADNORTH); //  344
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_DPADSOUTH); //  345
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_DPADWEST); //  346
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTPAD_DPADEAST); //  347
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_TOUCH); //  348
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_SWIPE); //  349
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_CLICK); //  350
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_DPADNORTH); //  351
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_DPADSOUTH); //  352
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_DPADWEST); //  353
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTPAD_DPADEAST); //  354
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L2_SOFTPULL); //  355
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L2); //  356
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R2_SOFTPULL); //  357
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R2); //  358
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_MOVE); //  359
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L3); //  360
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_DPADNORTH); //  361
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_DPADSOUTH); //  362
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_DPADWEST); //  363
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_DPADEAST); //  364
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_LEFTSTICK_TOUCH); //  365
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_MOVE); //  366
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R3); //  367
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_DPADNORTH); //  368
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_DPADSOUTH); //  369
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_DPADWEST); //  370
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_DPADEAST); //  371
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RIGHTSTICK_TOUCH); //  372
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L4); //  373
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R4); //  374
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_L5); //  375
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_R5); //  376
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_MOVE); //  377
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_NORTH); //  378
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_SOUTH); //  379
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_WEST); //  380
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_DPAD_EAST); //  381
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_GYRO_MOVE); //  382
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_GYRO_PITCH); //  383
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_GYRO_YAW); //  384
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_GYRO_ROLL); //  385
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED1); //  386
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED2); //  387
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED3); //  388
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED4); //  389
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED5); //  390
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED6); //  391
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED7); //  392
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED8); //  393
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED9); //  394
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED10); //  395
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED11); //  396
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED12); //  397
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED13); //  398
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED14); //  399
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED15); //  400
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED16); //  401
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED17); //  402
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED18); //  403
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED19); //  404
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_STEAMDECK_RESERVED20); //  405
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_COUNT); //  406
+	BIND_ENUM_CONSTANT(INPUT_ACTION_ORIGIN_MAXIMUMPOSSIBLEVALUE); //  32767
 
 	// STEAM INPUT TYPE /////////////////////////
 	BIND_ENUM_CONSTANT(INPUT_TYPE_UNKNOWN); // 0
@@ -12860,6 +13048,7 @@ void Steam::_bind_methods() {
 	BIND_ENUM_CONSTANT(FEATURE_LIBRARY); // 11
 	BIND_ENUM_CONSTANT(FEATURE_TEST); // 12
 	BIND_ENUM_CONSTANT(FEATURE_SITE_LICENSE); // 13
+	BIND_ENUM_CONSTANT(FEATURE_KIOSK_MODE); // 14
 	BIND_ENUM_CONSTANT(FEATURE_MAX);
 
 	// STEAM PARTY BEACON LOCATION TYPE /////////
@@ -13050,6 +13239,13 @@ void Steam::_bind_methods() {
 	BIND_ENUM_CONSTANT(USERUGCLISTSORTORDER_SUBSCRIPTIONDATEDESC); // 4
 	BIND_ENUM_CONSTANT(USERUGCLISTSORTORDER_VOTESCOREDESC); // 5
 	BIND_ENUM_CONSTANT(USERUGCLISTSORTORDER_FORMODERATION); // 6
+
+	// UGC CONTENT DESCRIPTOR ID ////////////////
+	BIND_ENUM_CONSTANT(UGCCONTENTDESCRIPTOR_NUDITY_OR_SEXUAL_CONTENT); // 1
+	BIND_ENUM_CONSTANT(UGCCONTENTDESCRIPTOR_FREQUENT_VIOLENCE_OR_GORE); // 2
+	BIND_ENUM_CONSTANT(UGCCONTENTDESCRIPTOR_ADULT_ONLY_SEXUAL_CONTENT); // 3
+	BIND_ENUM_CONSTANT(UGCCONTENTDESCRIPTOR_GRATUITOUS_SEXUAL_CONTENT); // 4
+	BIND_ENUM_CONSTANT(UGCCONTENTDESCRIPTOR_ANY_MATURE_CONTENT); // 5
 
 	// FAILURE TYPE /////////////////////////////
 	BIND_ENUM_CONSTANT(FAILURE_FLUSHED_CALLBACK_QUEUE); // 0
