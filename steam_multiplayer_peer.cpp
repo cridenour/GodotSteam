@@ -22,7 +22,7 @@ SteamMultiplayerPeer::~SteamMultiplayerPeer() {
 	if (lobby_id != CSteamID()) {
 		SteamMatchmaking()->LeaveLobby(lobby_id);
 		//todo disconnect all connected peers?
-	} 
+	}
 }
 
 uint64_t SteamMultiplayerPeer::get_lobby_id() {
@@ -103,24 +103,22 @@ Error SteamMultiplayerPeer::get_packet(const uint8_t **r_buffer, int &r_buffer_s
 }
 
 int SteamMultiplayerPeer::_get_steam_transfer_flag() {
-	// return k_nSteamNetworkingSend_ReliableNoNagle; //todo this helped fix some bugs with unreliable packets
 	auto transferMode = get_transfer_mode();
 
-	// auto agroFlag = k_nSteamNetworkingSend_UseCurrentThread | k_nSteamNetworkingSend_AutoRestartBrokenSession;
-	auto agroFlag = 0;
-
-	auto autoFlags = (k_nSteamNetworkingSend_NoNagle * no_nagle) |
-			(k_nSteamNetworkingSend_NoDelay * no_delay) | agroFlag;
+	auto flags = (k_nSteamNetworkingSend_NoNagle * no_nagle) |
+			(k_nSteamNetworkingSend_NoDelay * no_delay);
 
 	switch (transferMode) {
 		case TransferMode::TRANSFER_MODE_RELIABLE:
-			return k_nSteamNetworkingSend_Reliable | autoFlags;
+			return k_nSteamNetworkingSend_Reliable | flags;
 			break;
 		case TransferMode::TRANSFER_MODE_UNRELIABLE:
-			return k_nSteamNetworkingSend_Unreliable | autoFlags;
+			return k_nSteamNetworkingSend_Unreliable | flags;
 			break;
 		case TransferMode::TRANSFER_MODE_UNRELIABLE_ORDERED:
-			ERR_FAIL_V_MSG(k_nSteamNetworkingSend_Reliable | autoFlags, "UNRELIABLE ORDERED NOT SUPPORTED! SENDING AS RELIABLE!");
+			//UNRELIABLE ORDERED NOT SUPPORTED! SENDING AS RELIABLE!
+			//maybe I should find a way do this properly? number unreliable packets, discarding out of order ones.
+			return k_nSteamNetworkingSend_Reliable | flags;
 			break;
 	}
 	ERR_FAIL_V_MSG(-1, "flags error. not sure what happened!?");
@@ -148,7 +146,7 @@ Error SteamMultiplayerPeer::put_packet(const uint8_t *p_buffer, int p_buffer_siz
 }
 
 int SteamMultiplayerPeer::get_max_packet_size() const {
-	return MAX_STEAM_PACKET_SIZE; // from ENet
+	return k_cbMaxSteamNetworkingSocketsMessageSizeSend;
 }
 
 bool SteamMultiplayerPeer::is_server_relay_supported() const {
@@ -160,32 +158,32 @@ void SteamMultiplayerPeer::set_target_peer(int p_peer_id) {
 };
 
 int SteamMultiplayerPeer::get_packet_peer() const {
-	ERR_FAIL_COND_V_MSG(!_is_active(), 1, "The multiplayer instance isn't currently active.");
-	ERR_FAIL_COND_V(incoming_packets.size() == 0, 1);
+	ERR_FAIL_COND_V_MSG(_is_active() == false, 1, "The multiplayer instance isn't currently active.");
+	ERR_FAIL_COND_V_MSG(incoming_packets.size() == 0, 1, "No packets to get!");
 
 	return connections_by_steamId64[incoming_packets.front()->get()->sender.ConvertToUint64()]->peer_id;
 }
 
 SteamMultiplayerPeer::TransferMode SteamMultiplayerPeer::get_packet_mode() const {
-	ERR_FAIL_COND_V_MSG(!_is_active(), TRANSFER_MODE_RELIABLE, "The multiplayer instance isn't currently active.");
-	ERR_FAIL_COND_V(incoming_packets.size() == 0, TRANSFER_MODE_RELIABLE);
+	ERR_FAIL_COND_V_MSG(_is_active() == false, TRANSFER_MODE_RELIABLE, "The multiplayer instance isn't currently active.");
+	ERR_FAIL_COND_V_MSG(incoming_packets.size() == 0, TRANSFER_MODE_RELIABLE, "No pending packets, cannot get transfer mode!");
 
-	// return incoming_packets.front()->get()->transfer_mode;
-	return TRANSFER_MODE_RELIABLE; //steam doesn't know how a packet was sent
+	if (incoming_packets.front()->get()->transfer_mode & k_nSteamNetworkingSend_Reliable) {
+		return TRANSFER_MODE_RELIABLE;
+	} else {
+		return TRANSFER_MODE_UNRELIABLE;
+	}
 }
 
 int SteamMultiplayerPeer::get_packet_channel() const {
-	ERR_FAIL_COND_V_MSG(!_is_active(), 1, "The multiplayer instance isn't currently active.");
-	ERR_FAIL_COND_V(incoming_packets.size() == 0, 1);
-	int ch = incoming_packets.front()->get()->channel;
-	// if (ch >= SYSCH_MAX) { // First 2 channels are reserved.
-	// 	return ch - SYSCH_MAX + 1;
-	// }
-	return ch;
+	ERR_FAIL_COND_V_MSG(_is_active() == false, TRANSFER_MODE_RELIABLE, "The multiplayer instance isn't currently active.");
+	ERR_FAIL_COND_V_MSG(incoming_packets.size() == 0, TRANSFER_MODE_RELIABLE, "No pending packets, cannot get channel!");
+
+	return incoming_packets.front()->get()->channel;
 }
 
 void SteamMultiplayerPeer::disconnect_peer(int p_peer, bool p_force) {
-	ERR_PRINT("ERROR:: SteamMultiplayerPeer::disconnect_peer not yet implemented");
+	ERR_FAIL_MSG("ERROR:: SteamMultiplayerPeer::disconnect_peer not yet implemented");
 }
 
 bool SteamMultiplayerPeer::is_server() const {
@@ -263,11 +261,11 @@ void SteamMultiplayerPeer::process_ping(const SteamNetworkingMessage_t *msg) {
 }
 
 void SteamMultiplayerPeer::close() {
-	ERR_PRINT("ERROR:: SteamMultiplayerPeer::close not yet implemented");
+	ERR_FAIL_MSG("ERROR:: SteamMultiplayerPeer::close not yet implemented");
 }
 
 int SteamMultiplayerPeer::get_unique_id() const {
-	ERR_FAIL_COND_V_MSG(!_is_active(), 0, "The multiplayer instance isn't currently active.");
+	ERR_FAIL_COND_V_MSG(_is_active() == false, 0, "The multiplayer instance isn't currently active.");
 	return unique_id;
 }
 
@@ -308,20 +306,18 @@ void SteamMultiplayerPeer::set_steam_id_peer(CSteamID steamId, int peer_id) {
 }
 
 Ref<SteamMultiplayerPeer::ConnectionData> SteamMultiplayerPeer::get_connection_by_peer(int peer_id) {
-	if(peerId_to_steamId.has(peer_id)){
+	if (peerId_to_steamId.has(peer_id)) {
 		return peerId_to_steamId[peer_id];
 	}
 	return nullptr;
 }
 
 void SteamMultiplayerPeer::add_connection_peer(const CSteamID &steamId, int peer_id) {
-	if (steamId == SteamUser()->GetSteamID()) {
-		ERR_PRINT("YOU CANNOT ADD A PEER THAT IS YOU!");
-		return;
-	}
-	Ref<ConnectionData> ccc = Ref<ConnectionData>(memnew(ConnectionData(steamId)));
-	connections_by_steamId64[steamId.ConvertToUint64()] = ccc;
-	auto a = ccc->ping();
+	ERR_FAIL_COND_MSG(steamId == SteamUser()->GetSteamID(), "YOU CANNOT ADD A PEER THAT IS YOU!");
+
+	Ref<ConnectionData> connectionData = Ref<ConnectionData>(memnew(ConnectionData(steamId)));
+	connections_by_steamId64[steamId.ConvertToUint64()] = connectionData;
+	auto a = connectionData->ping();
 	if (a != OK) {
 		DEBUG_DATA_SIGNAL_V("add_connection_peer: Error sending ping", a);
 	}
@@ -367,6 +363,7 @@ void SteamMultiplayerPeer::lobby_created_scb(LobbyCreated_t *lobby_data, bool io
 }
 
 Error SteamMultiplayerPeer::join_lobby(uint64_t lobbyId) {
+	ERR_FAIL_COND_V_MSG(SteamMatchmaking() == NULL, ERR_DOES_NOT_EXIST, "`SteamMatchmaking()` is null.");
 	ERR_FAIL_COND_V_MSG(lobby_state != LOBBY_STATE::LOBBY_STATE_NOT_CONNECTED, ERR_ALREADY_IN_USE, "CANNOT JOIN A LOBBY WHILE IN A LOBBY!");
 
 	if (SteamMatchmaking() != NULL) {
@@ -461,7 +458,9 @@ void SteamMultiplayerPeer::lobby_data_update(LobbyDataUpdate_t *call_data) {
 
 //called when a player joins a lobby. Including when the host creates and joins
 void SteamMultiplayerPeer::lobby_joined_scb(LobbyEnter_t *lobbyData) {
-	ERR_FAIL_COND_MSG(lobbyData->m_ulSteamIDLobby != this->lobby_id.ConvertToUint64(), "joined a lobby that isn't THIS lobby? this is probably an error? weird");
+	if (lobbyData->m_ulSteamIDLobby != this->lobby_id.ConvertToUint64()) {
+		return;
+	}
 
 	if (lobbyData->m_EChatRoomEnterResponse == k_EChatRoomEnterResponseSuccess) {
 		auto sm = SteamMatchmaking();
